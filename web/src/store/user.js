@@ -1,0 +1,91 @@
+import $ from 'jquery'
+
+export default{
+    state: {
+        id:"",
+        username:"",
+        image:"",
+        token:"",
+        is_login:false,
+        socket:null,
+    },
+    getters: {
+    },
+    mutations: {
+        updateUser(state,user){
+            state.id=user.id;
+            state.username=user.username;
+            state.image=user.image;
+            state.is_login=user.is_login;
+        },
+        updateToken(state,token){
+            state.token=token;
+        },
+        updateSocket(state,socket){
+            state.socket=socket;
+        },
+        logout(state){
+            state.id="";
+            state.username="";
+            state.admin=false;
+            state.token="";
+            state.is_login=false;
+        },
+    },
+    actions: {
+        login(context,data){
+            $.ajax({
+                url:"http://8.130.144.38:8080/user/Login",
+                type:"post",
+                data:{
+                  username:data.username,
+                  password:data.password,
+                },
+                success(resp){
+                    if(resp.code===10000){
+                        localStorage.setItem("jwt_token",resp.data.token);
+                        context.commit("updateToken",resp.data.token);
+                        data.success(resp);
+                    }
+                    else{
+                        data.error(resp);
+                    }
+                },
+                error(resp){
+                  data.error(resp);
+                }
+            })
+        },
+        getinfo(context,data){
+            $.ajax({
+                url:"http://8.130.144.38:8080/user/info",
+                type:"post",
+                headers:{
+                    Authorization:context.state.token,
+                },
+                success(resp){
+                    console.log(resp);
+                    if(resp.code===10000){
+                        context.commit("updateUser",{
+                            ...resp.data,
+                            is_login:true,
+                        })
+                        data.success(resp);
+                    }
+                    else{
+                        data.error(resp);
+                    }
+                },
+                error(resp){
+                    data.error(resp);
+                }
+            })
+        },
+        logout(context){
+            localStorage.removeItem("jwt_token");
+            context.commit("logout");
+        },
+    },
+    modules: {
+    }
+}
