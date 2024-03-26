@@ -48,6 +48,7 @@ export default{
                     confirmPassword:confirmPassword.value,
                 },
                 success(resp){
+                    console.log(resp)
                     if(resp.code===10000){
                         router.push({name:"user_login"});
                     }

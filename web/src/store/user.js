@@ -5,6 +5,8 @@ export default{
         id:"",
         username:"",
         image:"",
+        is_check:false,
+        check_day:"",
         token:"",
         is_login:false,
         socket:null,
@@ -13,13 +15,18 @@ export default{
     },
     mutations: {
         updateUser(state,user){
-            state.id=user.id;
-            state.username=user.username;
-            state.image=user.image;
+            state.id=user.ID;
+            state.username=user.Username;
+            state.image=user.ImgURL;
+            state.is_check=user.Check;
+            state.check_day=user.ContinueCheck;
             state.is_login=user.is_login;
         },
         updateToken(state,token){
             state.token=token;
+        },
+        updateCheck(state,is_check){
+            state.is_check=is_check;
         },
         updateSocket(state,socket){
             state.socket=socket;

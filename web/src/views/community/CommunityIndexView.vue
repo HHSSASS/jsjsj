@@ -11,27 +11,40 @@
     </div>
     <div @scroll="onscroll" class="main" id="main">
         <img src="@/assets/images/title.png" alt="" width="100%"> 
-        <div class="item" v-for="item in items" :key="item.id">
-            <div data-bs-toggle="offcanvas" :data-bs-target="'#post'+item.id" aria-controls="offcanvasExample">
+        <div class="post" v-for="post in posts" :key="post.ID">
+            <div @click="pull_comment(post.ID)" data-bs-toggle="offcanvas" :data-bs-target="'#post'+post.ID" aria-controls="offcanvasExample">
                 <div class="row">
                     <div class="col-7">
-                        <div>{{ item.Title }}</div>
-                        <div>{{ item.Type }}•{{ item.Subject }}</div>
-                        <div>{{ item.CreatedAt.slice(0,10) }}</div>
+                        <div>{{ post.Title }}</div>
+                        <div>{{ post.Type }}•{{ post.Subject }}</div>
+                        <div>{{ post.CreatedAt.slice(0,10) }}</div>
                     </div>
-                    <div v-if="item.ImagesURL==null" class="col-5"></div>
+                    <div v-if="post.ImagesURL==null" class="col-5"></div>
                     <div v-else class="col-5">
-                        <img :src="item.ImagesURL[0]" alt="" max-width="100%" height="95px">
+                        <img :src="post.ImagesURL[0]" alt="" max-width="100%" max-height="95px">
                     </div>
                 </div>
             </div>
-            <div class="offcanvas offcanvas-end" tabindex="-1" :id="'post'+item.id" aria-labelledby="offcanvasExampleLabel" style="width: 100%;">
+            <div class="offcanvas offcanvas-end" tabindex="-1" :id="'post'+post.ID" aria-labelledby="offcanvasExampleLabel" style="width: 100%;">
                 <div class="offcanvas-header">
                     <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
                 </div>
                 <div class="offcanvas-body">
-                    <div>{{ item.Title }}</div>
-                    <div>{{ item.Content }}</div>
+                    <div>{{ post.Title }}</div>
+                    <div>{{ post.Content }}</div>
+                    <div>{{ post.Type }}•{{ post.Subject }}</div>
+                    <div>{{ post.CreatedAt.slice(0,10) }}</div>
+                    <div class="comment_nav">评论</div>
+                    <div v-for="comment in comments" :key="comment.id" class="comment">
+                        <div>{{ comment.username }}</div>
+                        <div>{{ comment.content }}</div>
+                    </div>
+                </div>
+                <div class="interact">
+                    <input v-model="new_comment" type="text" class="form-control form-control-sm" placeholder="评论" style="width: 70%;">
+                    <button @click="add_comment(post.ID)" class="btn btn-dark btn-sm">发送</button>
+                    <div class="iconfont icon-dianzan"></div>
+                    <div class="iconfont icon-shoucang"></div>
                 </div>
             </div>
         </div>
@@ -45,19 +58,24 @@
 import NavBar from '@/components/NavBar.vue'
 import $ from 'jquery'
 import { ref } from 'vue'
+import router from '@/router/index'
+import { useStore } from 'vuex'
 
 export default{
     components:{
         NavBar
     },
     setup(){
-        let items=ref([])
+        const store=useStore();
+        let posts=ref([])
+        let comments=ref([])
         let load=ref(0)
         const types=["全部","资讯","知识","问答","分享"]
         const subjects=["政治","数学","外语","计算机","经济","法律","地质","机械"]
         let current_page=1;
         let current_type="全部";
         let current_subject="全部";
+        let new_comment=ref("")
         const onscroll = () => {
             //变量scrollTop是滚动条滚动时，距离顶部的距离
             var scrollTop = document.getElementById('main').scrollTop;
@@ -68,11 +86,10 @@ export default{
             if (scrollTop + windowHeight >= scrollHeight - 10 && load.value==0){
                 load.value=1;
                 current_page++;
-                pull_page();
+                pull_post();
             }
         }
-        const pull_page=()=>{
-            console.log(current_type);
+        const pull_post=()=>{
             $.ajax({
                 url:"http://8.130.144.38:8080/post/getList",
                 type:"post",
@@ -83,26 +100,69 @@ export default{
                 },
                 success(resp){
                     console.log(resp);
-                    items.value.push.apply(items.value,resp.data);
+                    posts.value.push.apply(posts.value,resp.data);
                     if(resp.data==null||resp.data.length!=10) load.value=2;
                     else load.value=0;
                 },
             })
         }
-        pull_page();
+        pull_post();
         const change_type=(type)=>{
             current_type=type;
             current_page=1;
-            items.value=[];
-            pull_page();
+            posts.value=[];
+            pull_post();
+        }
+        const pull_comment=id=>{
+            new_comment.value="";
+            $.ajax({
+                url:"http://8.130.144.38:8080/up/commentlist",
+                type:"post",
+                data:{
+                    postId:id,
+                },
+                success(resp){
+                    console.log(resp);
+                    if(resp.code==10000){
+                        comments.value=resp.data;
+                    }
+                },
+            })
+        }
+        const add_comment=id=>{
+            if(!store.state.user.is_login){
+                router.push({name:"user_login"});
+                return;
+            }
+            $.ajax({
+                url:"http://8.130.144.38:8080/up/comment",
+                type:"post",
+                headers:{
+                    Authorization:store.state.user.token,
+                },
+                data:{
+                    postId:id,
+                    content:new_comment.value,
+                },
+                success(resp){
+                    console.log(resp);
+                    if(resp.code==10000){
+                        pull_comment(id);
+                    }
+                },
+            })
         }
         return{
-            items,
+            posts,
             load,
             types,
             subjects,
+            new_comment,
+            comments,
             onscroll,
             change_type,
+            pull_comment,
+            add_comment,
         }
     }
 }
@@ -127,9 +187,26 @@ div.main{
     height: 80vh;
     overflow-y: scroll;
 }
-div.item{
+div.post{
     border-bottom: 1px solid gray;
     height: 100px;
+}
+div.comment_nav{
+    font-size: 20px;
+    border-top: 1px solid gray;
+    border-bottom: 1px solid gray;
+}
+div.comment{
+    border-bottom: 1px solid gray;
+    height: 100px;
+}
+div.interact{
+    display: flex;
+    box-shadow: 0 0 10px #9b9393;
+}
+div.iconfont{
+    font-size: 20px;
+    margin-left: 5px;
 }
 </style>
   
