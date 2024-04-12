@@ -3,9 +3,11 @@
         <div class="largetitle">社区</div>
         <div class="nav">
             <div @click="change_type(type)" class="title" v-for="(type,index) in types" :key="index">{{ type }}</div>
-            <div class="title" style="margin-left: auto;display: flex;">
+            <div class="title" style="margin-left: auto;display: flex">
                 <div style="margin-right: 5px;">学科</div>
-                <div class="iconfont icon-sanhengxian"></div>
+                <select @change="change_subject" v-model="current_subject" class="form-select form-select-sm" aria-label="Default select example" style="width: 80px">
+                    <option v-for="(subject,index) in subjects" :key="index" :value="subject">{{ subject }}</option>
+                </select>
             </div>
         </div>
     </div>
@@ -14,14 +16,14 @@
         <div class="post" v-for="post in posts" :key="post.ID">
             <div @click="pull_comment(post.ID)" data-bs-toggle="offcanvas" :data-bs-target="'#post'+post.ID" aria-controls="offcanvasExample">
                 <div class="row">
-                    <div class="col-7">
-                        <div>{{ post.Title }}</div>
+                    <div class="col-9">
+                        <div style="margin-bottom: 10px;">{{ post.Title }}</div>
                         <div>{{ post.Type }}•{{ post.Subject }}</div>
                         <div>{{ post.CreatedAt.slice(0,10) }}</div>
                     </div>
                     <div v-if="post.ImagesURL==null" class="col-5"></div>
-                    <div v-else class="col-5">
-                        <img :src="post.ImagesURL[0]" alt="" max-width="100%" max-height="95px">
+                    <div v-else class="col-3">
+                        <img :src="post.ImagesURL[0]" alt="" style="max-width:95px; max-height:95px;">
                     </div>
                 </div>
             </div>
@@ -30,14 +32,37 @@
                     <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
                 </div>
                 <div class="offcanvas-body">
+                    <div :id="'carousel'+post.ID" class="carousel slide">
+                        <div class="carousel-indicators">
+                            <button v-for="(img,index) in post.ImagesURL" :key="index" type="button" :data-bs-target="'#carousel'+post.ID" :data-bs-slide-to="index" class="active" aria-current="true" aria-label=""></button>
+                        </div>
+                        <div class="carousel-inner">
+                            <div v-for="(img,index) in post.ImagesURL" :key="index" :class="'carousel-item'+(index==0?' active':'')">
+                                <img :src="img" class="d-block" alt="" style="max-height:200px;margin: auto;">
+                            </div>
+                        </div>
+                        <button class="carousel-control-prev" type="button" :data-bs-target="'#carousel'+post.ID" data-bs-slide="prev">
+                            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                            <span class="visually-hidden">Previous</span>
+                        </button>
+                        <button class="carousel-control-next" type="button" :data-bs-target="'#carousel'+post.ID" data-bs-slide="next">
+                            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                            <span class="visually-hidden">Next</span>
+                        </button>
+                    </div>
                     <div>{{ post.Title }}</div>
-                    <div>{{ post.Content }}</div>
                     <div>{{ post.Type }}•{{ post.Subject }}</div>
-                    <div>{{ post.CreatedAt.slice(0,10) }}</div>
+                    <div>{{ post.CreatedAt }}</div>
+                    <div style="margin-top: 10px;margin-bottom: 10px;">{{ post.Content }}</div>
                     <div class="comment_nav">评论</div>
                     <div v-for="comment in comments" :key="comment.id" class="comment">
-                        <div>{{ comment.username }}</div>
+                        <div style="display: flex;">
+                            <img v-if="comment.imgUrl!=''" :src="comment.imgUrl" alt="" style="max-width:20px; max-height:20px;border-radius: 50%;margin-top: 2px;">
+                            <img v-else src="@/assets/images/user.png" alt="" style="max-width:20px; max-height:20px;border-radius: 50%;margin-top: 2px;">
+                            <div>{{ comment.username }}</div>
+                        </div>
                         <div>{{ comment.content }}</div>
+                        <div>{{ comment.createdAt }}</div>
                     </div>
                 </div>
                 <div class="interact">
@@ -71,10 +96,10 @@ export default{
         let comments=ref([])
         let load=ref(0)
         const types=["全部","资讯","知识","问答","分享"]
-        const subjects=["政治","数学","外语","计算机","经济","法律","地质","机械"]
+        const subjects=["全部","政治","数学","外语","计算机","经济","法律","地质","机械"]
         let current_page=1;
         let current_type="全部";
-        let current_subject="全部";
+        let current_subject=ref("全部");
         let new_comment=ref("")
         const onscroll = () => {
             //变量scrollTop是滚动条滚动时，距离顶部的距离
@@ -96,7 +121,7 @@ export default{
                 data:{
                     page:current_page,
                     type:current_type,
-                    subject:current_subject,
+                    subject:current_subject.value,
                 },
                 success(resp){
                     console.log(resp);
@@ -109,6 +134,11 @@ export default{
         pull_post();
         const change_type=(type)=>{
             current_type=type;
+            current_page=1;
+            posts.value=[];
+            pull_post();
+        }
+        const change_subject=()=>{
             current_page=1;
             posts.value=[];
             pull_post();
@@ -159,8 +189,10 @@ export default{
             subjects,
             new_comment,
             comments,
+            current_subject,
             onscroll,
             change_type,
+            change_subject,
             pull_comment,
             add_comment,
         }
@@ -180,8 +212,8 @@ div.nav{
     display: flex;
 }
 div.title{
-    margin-left: 10px;
-    margin-right: 10px;
+    margin-left: 5px;
+    margin-right: 5px;
 }
 div.main{
     height: 80vh;
